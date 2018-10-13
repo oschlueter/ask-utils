@@ -1,0 +1,139 @@
+#!/opt/local/bin/python
+
+import argparse
+import json
+import os
+import sys
+
+
+class AskUtils:
+    def __init__(self):
+        with open('skill.json') as f:
+            self.data = json.load(f)
+
+    def save(self):
+        with open('skill.json', 'w') as f:
+            json.dump(self.data, f, indent=True)
+
+    def get_single_locale(self):
+        locales = list(self.data['manifest']['publishingInformation']['locales'].keys())
+
+        if len(locales) != 1:
+            raise ValueError('this option only works for single-locale skills')
+
+        return locales[0]
+
+    def set_privacy_compliance(self, allows_purchases=False, export_compliant=True, contains_ads=False,
+                               child_directed=False, personal_info=False):
+        self.data['manifest']['privacyAndCompliance'] = {
+            "allowsPurchases": allows_purchases,
+            "isExportCompliant": export_compliant,
+            "containsAds": contains_ads,
+            "isChildDirected": child_directed,
+            "usesPersonalInfo": personal_info
+        }
+
+    def set_icons(self, small_icon, large_icon):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['smallIconUri'] = small_icon
+        parent['largeIconUri'] = large_icon
+
+    def set_keywords(self, keywords):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['keywords'] = keywords
+
+    def change_locale(self, new_locale):
+        loc = self.data['manifest']['publishingInformation']['locales']
+
+        if new_locale not in loc:
+            single_locale = self.get_single_locale()
+
+            loc[new_locale] = loc[single_locale]
+            del loc[single_locale]
+
+    def set_summary(self, summary):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['summary'] = summary
+
+    def set_description(self, description):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['description'] = description
+
+    def set_example_phrases(self, phrases):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['examplePhrases'] = phrases
+
+    def set_skill_name(self, skill_name):
+        parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
+        parent['name'] = skill_name
+
+    def set_testing_instructions(self, testing_instructions):
+        parent = self.data['manifest']['publishingInformation']
+        parent['testingInstructions'] = testing_instructions
+
+    def set_category(self, category):
+        # TODO input validation
+        parent = self.data['manifest']['publishingInformation']
+        parent['category'] = category
+
+
+if __name__ == '__main__':
+    # TODO accept values for --privacy
+    # TODO support multiple locales
+    # TODO copy existing locale to other target locales (e.g. en-US to en-CA)
+    # TODO delete locale? create backup prior to deleting
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-k', '--keywords', nargs='+', help='List of keywords for the skill')
+    parser.add_argument('-i', '--icons', nargs=2, help='Set URLs for small icon and large icon')
+    parser.add_argument('-p', '--privacy', action='store_true', help='Sets privacy and compliance (defaults for now)')
+    parser.add_argument('--change-locale', help='Changes single locale to new value')
+    parser.add_argument('-s', '--summary', help='A short summary for the skill')
+    parser.add_argument('-d', '--description', help='A full description for the skill')
+    parser.add_argument('-e', '--example-phrases', nargs='+', help='Example phrases for the skill')
+    parser.add_argument('-n', '--skill-name', help='The name of the skill (not invocation name!)')
+    parser.add_argument('-t', '--testing-instructions', help='Testing instructions for the skill')
+    parser.add_argument('-c', '--category', help="This skill's category")
+    # parser.add_argument('--upload-icons', nargs=2, help='Upload small icon and large icon and set URLs in skill.json')
+    # parser.add_argument('--select-category', help='Interactive selection of skill category')
+
+    args = parser.parse_args()
+
+    # TODO add option to specify path to skill.json
+    if not os.path.isfile('skill.json'):
+        print('skill.json not found')
+        sys.exit(1)
+
+    # TODO replace if statements with arguments to add_argument's action parameter
+    utils = AskUtils()
+
+    if args.privacy:
+        utils.set_privacy_compliance()
+
+    if args.icons:
+        utils.set_icons(args.icons[0], args.icons[1])
+
+    if args.keywords:
+        utils.set_keywords(args.keywords)
+
+    if args.change_locale:
+        utils.change_locale(args.change_locale)
+
+    if args.summary:
+        utils.set_summary(args.summary)
+
+    if args.description:
+        utils.set_description(args.description)
+
+    if args.example_phrases:
+        utils.set_example_phrases(args.example_phrases)
+
+    if args.skill_name:
+        utils.set_skill_name(args.skill_name)
+
+    if args.testing_instructions:
+        utils.set_testing_instructions(args.testing_instructions)
+
+    if args.category:
+        utils.set_category(args.category)
+
+    utils.save()
