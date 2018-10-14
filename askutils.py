@@ -96,6 +96,16 @@ class AskUtils:
         model['interactionModel']['languageModel']['invocationName'] = invocation_name.lower()
         AskUtils.save_json(fn, model)
 
+    def set_language_model(self, language_model):
+        single_locale = self.get_single_locale()
+        fn = 'models/{}.json'.format(single_locale)
+
+        new_lang_model = AskUtils.load_json(language_model)
+
+        model = AskUtils.load_json(fn)
+        model['interactionModel']['languageModel'] = new_lang_model['languageModel']
+        AskUtils.save_json(fn, model)
+
 
 if __name__ == '__main__':
     # TODO accept values for --privacy
@@ -114,6 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--skill-name', help='The name of the skill (not invocation name!)')
     parser.add_argument('-t', '--testing-instructions', help='Testing instructions for the skill')
     parser.add_argument('-c', '--category', help="This skill's category")
+    parser.add_argument('--language-model', help="Overwrites language model with content from provided JSON file")
     # parser.add_argument('--upload-icons', nargs=2, help='Upload small icon and large icon and set URLs in skill.json')
     # parser.add_argument('--select-category', help='Interactive selection of skill category')
 
@@ -159,5 +170,8 @@ if __name__ == '__main__':
 
     if args.invocation_name:
         utils.set_invocation_name(args.invocation_name)
+
+    if args.language_model:
+        utils.set_language_model(args.language_model)
 
     utils.save()
