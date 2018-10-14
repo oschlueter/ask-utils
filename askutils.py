@@ -8,12 +8,20 @@ import sys
 
 class AskUtils:
     def __init__(self):
-        with open('skill.json') as f:
-            self.data = json.load(f)
+        self.data = AskUtils.load_json('skill.json')
+
+    @staticmethod
+    def load_json(fn):
+        with open(fn) as f:
+            return json.load(f)
+
+    @staticmethod
+    def save_json(fn, data):
+        with open(fn, 'w') as f:
+            json.dump(data, f, indent=True)
 
     def save(self):
-        with open('skill.json', 'w') as f:
-            json.dump(self.data, f, indent=True)
+        AskUtils.save_json('skill.json', self.data)
 
     def get_single_locale(self):
         locales = list(self.data['manifest']['publishingInformation']['locales'].keys())
@@ -48,8 +56,12 @@ class AskUtils:
         if new_locale not in loc:
             single_locale = self.get_single_locale()
 
+            # change key in dict
             loc[new_locale] = loc[single_locale]
             del loc[single_locale]
+
+            # rename model file
+            os.rename('models/{}.json'.format(single_locale), 'models/{}.json'.format(new_locale))
 
     def set_summary(self, summary):
         parent = self.data['manifest']['publishingInformation']['locales'][self.get_single_locale()]
@@ -76,6 +88,14 @@ class AskUtils:
         parent = self.data['manifest']['publishingInformation']
         parent['category'] = category
 
+    def set_invocation_name(self, invocation_name):
+        single_locale = self.get_single_locale()
+        fn = 'models/{}.json'.format(single_locale)
+
+        model = AskUtils.load_json(fn)
+        model['interactionModel']['languageModel']['invocationName'] = invocation_name.lower()
+        AskUtils.save_json(fn, model)
+
 
 if __name__ == '__main__':
     # TODO accept values for --privacy
@@ -84,7 +104,8 @@ if __name__ == '__main__':
     # TODO delete locale? create backup prior to deleting
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--keywords', nargs='+', help='List of keywords for the skill')
-    parser.add_argument('-i', '--icons', nargs=2, help='Set URLs for small icon and large icon')
+    parser.add_argument('--icons', nargs=2, help='Set URLs for small icon and large icon')
+    parser.add_argument('-i', '--invocation-name', help='See ASK instructions for proper choices')
     parser.add_argument('-p', '--privacy', action='store_true', help='Sets privacy and compliance (defaults for now)')
     parser.add_argument('--change-locale', help='Changes single locale to new value')
     parser.add_argument('-s', '--summary', help='A short summary for the skill')
@@ -135,5 +156,8 @@ if __name__ == '__main__':
 
     if args.category:
         utils.set_category(args.category)
+
+    if args.invocation_name:
+        utils.set_invocation_name(args.invocation_name)
 
     utils.save()
